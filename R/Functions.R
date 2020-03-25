@@ -1,9 +1,4 @@
-# Packages ----
-library(MuMIn)
-library(doParallel)
-library(igraph)
-library(tidyr)
-library(dplyr)
+
 
 ## Fonctions ----
 # Modele liste d'espece ----
@@ -16,7 +11,7 @@ fun_fit <- function(k,matrice_tot, i) {
                        nrow(matrice_tot),
                        replace = T), ]
   # Modele nul
-  z1 <- test1[, i+1]
+  z1 <- test1[, i]
   glm_nul1 <-
     glm(z1 ~ 1, family = "binomial", data = test1)
   
@@ -72,9 +67,8 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
       "AIC_type_F_95inf",
       "AIC_type_F_95sup","diff_mean","diff_95")
   SORTIE_sp$Occurence[1] <-
-    sum(as.numeric(paste(matrice_tot[, i+1])))
-  i <- 1
-  # Abondance de l'espece dans le jeux de donne?es
+    sum(as.numeric(paste(matrice_tot[, i])))
+  # Abondance de l'espece dans le jeux de donnees
 
   # Moyenne des coeficients
   SORTIE_sp$coef_mean[1] <-   mean(res[, "Coef_FR"])
@@ -98,8 +92,14 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
 
 # Fonction pour tester effet du type de foret pour chaque espece.
 Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
+  # Packages ----
+  library(MuMIn)
+  library(doParallel)
+  library(igraph)
+  library(tidyr)
+  library(dplyr)  
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- foreach(i = 1:(length(pres_abs_sp)-1),
+  result_list <- foreach(i = 1:(length(pres_abs_sp)),
                          .export = c("FUN_RES_SP", "fun_fit"),
                          .packages = "igraph") %dopar% {
                            FUN_RES_SP(i, N_resample, matrice_tot)
@@ -110,8 +110,14 @@ Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 
 # Fonction pour tester effet du type de foret pour chaque espece.
 Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
+  # Packages ----
+  library(MuMIn)
+  library(doParallel)
+  library(igraph)
+  library(tidyr)
+  library(dplyr)  
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- mclapply(1:(length(pres_abs_sp)-1),
+  result_list <- mclapply(1:(length(pres_abs_sp)),
                           FUN_RES_SP, N_resample, matrice_tot,
                           mc.cores = 5)
   
@@ -123,7 +129,7 @@ Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 # Fonction pour tester effet du type de foret pour chaque espece.
 Analyse_liste2 <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- lapply(1:(length(pres_abs_sp)-1),
+  result_list <- lapply(1:(length(pres_abs_sp)),
                         FUN = FUN_RES_SP, N_resample, matrice_tot)
   
   res <- dplyr::bind_rows(result_list)
@@ -179,7 +185,7 @@ format_data <- function(path, Groupe_Select = "Plantes"){
   pres_abs_Select <-
     dplyr::select(matrice_Select,-c("ESSENCE":"Grossier")) # matrice de presence-absence seules
   
-  return(list(mat = matrice_Select, pres_abs = pres_abs_Select))  
+  return(list(mat = matrice_Select, pres_abs = pres_abs_Select[, -1]))  
 }
 
 
@@ -199,4 +205,23 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print("done")
 }
 
+
+Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV", Groupe_Select = "Plantes"){
+  list_df <- format_data(path = file.path("data",paste0(Parc, "_DATA_POINTS1.csv")), 
+                         Groupe_Select = "Plantes")
+  ncols <- ncol(list_df$pres_abs)
+  
+  0:9*floor(ncols/10)+1
+  c(1:9*floor(ncols/10), ncols)
+  start.time <- Sys.time()
+  ResFit <-
+    Analyse_liste2(list_df$pres_abs, list_df$mat, N_resample = 100)
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  print(time.taken)
+  
+  write.csv(ResFit,
+            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties_", Seq_Sel, ".csv")))
+  print("done")
+}
 
