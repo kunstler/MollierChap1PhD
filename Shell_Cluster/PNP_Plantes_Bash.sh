@@ -1,4 +1,4 @@
-#!/bin/#!/bin/bash
+#!/bin/bash
 
 for {1..10} 
 do 
