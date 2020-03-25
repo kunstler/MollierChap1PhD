@@ -3,6 +3,7 @@ library(MuMIn)
 library(doParallel)
 library(igraph)
 library(tidyr)
+library(dplyr)
 
 ## Fonctions ----
 # Modele liste d'espece ----
@@ -110,7 +111,6 @@ Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 # Fonction pour tester effet du type de foret pour chaque espece.
 Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  library(parallel)
   result_list <- mclapply(1:(length(pres_abs_sp)-1),
                           FUN_RES_SP, N_resample, matrice_tot,
                           mc.cores = 5)

@@ -14,6 +14,7 @@ library(doParallel)
 library(igraph)
 library(tidyr)
 library(dplyr)
+library(parallel)
 ```
 
 
