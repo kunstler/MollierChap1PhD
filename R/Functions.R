@@ -1,3 +1,5 @@
+library(tidyr)
+library(dplyr)  
 
 
 ## Fonctions ----
@@ -96,8 +98,6 @@ Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
   library(MuMIn)
   library(doParallel)
   library(igraph)
-  library(tidyr)
-  library(dplyr)  
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
   result_list <- foreach(i = 1:(length(pres_abs_sp)),
                          .export = c("FUN_RES_SP", "fun_fit"),
