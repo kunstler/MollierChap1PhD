@@ -1,5 +1,7 @@
 # Fit PNV Plantes
 
+args <- commandArgs(trailingOnly=TRUE)
+
 if(length(args)==0){
   print("No arguments supplied.")
 }else{

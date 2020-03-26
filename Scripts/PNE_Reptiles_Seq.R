@@ -1,4 +1,5 @@
-# Fit PNV Arthros
+# Fit PNE Arthros
+args <- commandArgs(trailingOnly=TRUE)
 
 if(length(args)==0){
   print("No arguments supplied.")
@@ -10,4 +11,4 @@ if(length(args)==0){
 
 source("R/Functions.R")
 Fun_Fit_Parc_Group_Seq(Seq_Sel = index, Parc = "PNE", Groupe_Select = "Reptiles")
-  
+
