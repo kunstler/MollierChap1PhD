@@ -93,7 +93,7 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
+Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -109,7 +109,7 @@ Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
+Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -127,7 +127,7 @@ Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste2 <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
+Analyse_liste2 <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
   result_list <- lapply(1:(length(pres_abs_sp)),
                         FUN = FUN_RES_SP, N_resample, matrice_tot)
