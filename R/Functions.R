@@ -197,7 +197,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
 
   start.time <- Sys.time()
   ResFit <-
-    Analyse_listeb(list_df$pres_abs, list_df$mat, N_resample = 3)
+    Analyse_listeb(list_df$pres_abs, list_df$mat, N_resample = 100)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -219,7 +219,7 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
   start.time <- Sys.time()
   ResFit <-
       Analyse_liste2(list_df$pres_abs[ ,sel_start:sel_end] ,
-                     list_df$mat, N_resample = 3)
+                     list_df$mat, N_resample = 100)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
