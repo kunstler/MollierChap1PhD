@@ -9,6 +9,8 @@ if(length(args)==0){
   }
 }
 
+.libPaths()
+
 source("R/Functions.R")
 Fun_Fit_Parc_Group_Seq(Seq_Sel = index, Parc = "PNE", Groupe_Select = "Oiseaux")
   
