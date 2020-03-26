@@ -1,4 +1,4 @@
-# Fit PNV Arthros
+# Fit PNV Plantes
 
 if(length(args)==0){
   print("No arguments supplied.")
@@ -10,4 +10,4 @@ if(length(args)==0){
 
 source("R/Functions.R")
 Fun_Fit_Parc_Group_Seq(Seq_Sel = index, Parc = "PNP", Groupe_Select = "Plantes")
-  
+
