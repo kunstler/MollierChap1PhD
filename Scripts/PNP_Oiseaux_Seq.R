@@ -1,4 +1,4 @@
-# Fit PNV Arthros
+# Fit PNP Oiseaux
 args <- commandArgs(trailingOnly=TRUE)
 
 if(length(args)==0){

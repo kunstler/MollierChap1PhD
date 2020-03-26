@@ -1,4 +1,4 @@
-# Fit PNV Arthros
+# Fit PNV Reptiles
 args <- commandArgs(trailingOnly=TRUE)
 
 if(length(args)==0){

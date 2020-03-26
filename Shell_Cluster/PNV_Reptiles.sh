@@ -18,4 +18,4 @@ echo ${SLURM_ARRAY_TASK_ID}
 
 
 # on lance le script R en precisant bien son chemin 
-R CMD BATCH "--args index=${SLURM_ARRAY_TASK_ID} PN='PNV' GR='Reptiles'" Scripts/PN_GR_Seq.R PNV_Reptiles${SLURM_ARRAY_TASK_ID}.out
+R CMD BATCH "--args index=${SLURM_ARRAY_TASK_ID}" Scripts/PNV_Reptiles_Seq.R PNV_Reptiles${SLURM_ARRAY_TASK_ID}.out
