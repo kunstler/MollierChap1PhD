@@ -13,7 +13,7 @@ fun_fit <- function(k,matrice_tot, i) {
                        nrow(matrice_tot),
                        replace = T), ]
   # Modele nul
-  z1 <- test1[, i]
+  z1 <- test1[, i+1]
   glm_nul1 <-
     glm(z1 ~ 1, family = "binomial", data = test1)
 
@@ -69,7 +69,7 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
       "AIC_type_F_95inf",
       "AIC_type_F_95sup","diff_mean","diff_95")
   SORTIE_sp$Occurence[1] <-
-    sum(as.numeric(paste(matrice_tot[, i])))
+    sum(as.numeric(paste(matrice_tot[, i+1])))
   # Abondance de l'espece dans le jeux de donnees
 
   # Moyenne des coeficients
@@ -139,8 +139,8 @@ Analyse_liste2 <- function(pres_abs_sp, matrice_tot, N_resample = 100) {
 # matrice de presence/pseudo_absence
 matrice_sp <- function(data) {
   sp_occ <- data.frame(table(data$CdNom)) #comptage sp
-  sp_occ <-
-    sp_occ[sp_occ$Freq >= 20, ] # selection sp presentes au moins 20 fois
+  sp_occ <- sp_occ[sp_occ$Freq >= 20, ]
+           # selection sp presentes au moins 20 fois
   occ_20 <- merge(data, sp_occ, by.x = "CdNom", by.y = "Var1")
   pres_abs1 <-
     as.data.frame(tapply(rep(1, dim(occ_20)[1]), list(occ_20$X_Y, occ_20$CdNom),
@@ -163,7 +163,8 @@ format_data <- function(path, Groupe_Select = "Plantes"){
     read.csv(path,
              row.names = "X",
              header = T)
-  PN_Point<-PN_Point[PN_Point$FORMATION %in% c("Coniferes","Melange","Feuillus"),]
+  PN_Point<-PN_Point[PN_Point$FORMATION %in% c("Coniferes","Melange",
+                                               "Feuillus"),]
 
   PN_Point <- drop_na(PN_Point, pH)
   PN_Point <- dplyr::select(PN_Point, -Dist_lisiere_anc)
@@ -177,13 +178,13 @@ format_data <- function(path, Groupe_Select = "Plantes"){
                       "Arthros" = c("Arachnides", "Insectes"),
                       "Oiseaux" = c("Oiseaux"))
 
-  PN_Select <-
+ PN_Select <-
     PN_Point[PN_Point$Groupe %in% list_select[[Groupe_Select]],]
-  #PN_Select <- subset(PN_Select, Source != "ONCFS")
   matrice_Select <-
     matrice_sp(PN_Select) # matrice presence-absence avec variables
   pres_abs_Select <-
-    dplyr::select(matrice_Select,-c("ESSENCE":"Grossier")) # matrice de presence-absence seules
+      dplyr::select(matrice_Select,-c("ESSENCE":"Grossier"))
+                     # matrice de presence-absence seules
 
   return(list(mat = matrice_Select, pres_abs = pres_abs_Select[, -1]))
 }
@@ -192,7 +193,7 @@ format_data <- function(path, Groupe_Select = "Plantes"){
 Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
     list_df <- format_data(path = file.path("data",paste0(Parc,
                                                        "_DATA_POINTS1.csv")),
-                         Groupe_Select = "Plantes")
+                         Groupe_Select = Groupe_Select)
 
   start.time <- Sys.time()
   ResFit <-

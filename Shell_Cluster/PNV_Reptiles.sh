@@ -7,13 +7,11 @@
 #SBATCH -e PNV_Reptiles%j.err
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=ALL                                   
-#SBATCH --mail-user=georges.kunstler@irstea.fr                                                                                                    
+#SBATCH --mail-user=georges.kunstler@irstea.fr                                  
 #SBATCH --mem=15000
   
 module unload gcc
-module load R/gcc
-module load lapack/gcc/64/3.8.0-with-blas
-module load nlopt/2.4.2                                                         
+module load R/gcc_5.2.0/64/3.6.1
 
 echo ${SLURM_JOB_NODELIST}
 echo ${SLURM_ARRAY_TASK_ID}
