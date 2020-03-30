@@ -8,31 +8,65 @@ library(dplyr)
 # fonction contenant les modeles a repeter 100 fois
 fun_fit <- function(k,matrice_tot, i) {
   # Echantillonnage des 0
-  test1 <-
-    matrice_tot[sample(row.names(matrice_tot),
-                       nrow(matrice_tot),
-                       replace = T), ]
+  #  resampling only on absence data 
+  matrice_tot$response <- matrice_tot[, i+1]
+  test1 <- matrice_tot[matrice_tot$response == 1, ]
+  test0t <- test[test$response == 0, ]
+  test0 <-
+    test0t[sample(row.names(test0t),
+                       min(10000, nrow(test0t)),
+                       replace = TRUE), ]
+  test_fit <- rbind(test1,test0)
+  #
   # Modele nul
-  z1 <- test1[, i+1]
   glm_nul1 <-
-    glm(z1 ~ 1, family = "binomial", data = test1)
+    glm(response ~ 1, family = "binomial", data = test_fit)
 
   # Modele avec variables environnementales seules
+  start_time <- Sys.time()
   glm_envir1 <-
     step(
       glm_nul1,
-      ~ .  + Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude + poly(Altitude, 2, raw = T) + Pente + poly(Pente, 2, raw = T)
-      + exposition + poly(exposition, 2, raw = T) + pH + poly(pH, 2, raw = T)
-      + phosphore + poly(phosphore, 2, raw = T)
-      + Azote + poly(Azote, 2, raw = T)
+      ~ .  + Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+        poly(Altitude, 2) + Pente + poly(Pente, 2)
+      + exposition + poly(exposition, 2) + pH + poly(pH, 2)
+      + phosphore + poly(phosphore, 2)
+      + Azote + poly(Azote, 2)
       + limons + argile,
       direction = "both",
       trace = 0
     )
+  end_time <- Sys.time()
+  end_time - start_time
+  
+  # library(glmnet)
+  # #convert training data to matrix format
+  # s_time <- Sys.time()
+  # x <- model.matrix(response~  Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+  #                     poly(Altitude, 2) + Pente + poly(Pente, 2)+ 
+  #                     exposition + poly(exposition, 2) + pH + poly(pH, 2) +
+  #                     phosphore + poly(phosphore, 2)+
+  #                     Azote + poly(Azote, 2)+
+  #                     limons + argile,test_fit)[, -1]
+  # #perform grid search to find optimal value of lambda
+  # #family= binomial => logistic regression, alpha=1 => lasso
+  # cvfit = cv.glmnet(x, test_fit$response, family = "binomial", type.measure = "auc")
+  # #plot result
+  # var_lasso <- as.matrix(coef(cvfit, s = "lambda.1se"))
+  # vars <- gsub( '(2\\)).*', '\\1', row.names(var_lasso)[var_lasso>0])
+  # vars <- vars[! vars == "(Intercept)"]
+  # 
+  # glm_envir1 <- glm(paste("response ~  ", paste(vars,  collapse = " + ")) ,
+  #                   family = "binomial", data = test_fit)
+  # e_time <- Sys.time()
+  # e_time - s_time
+  # 
   # Ajout du type de foret comme predicteur
   glm_type_F1 <- update(glm_envir1, ~ . + TYPE_FORET)
 
-  ## Remplissage du tableau result_repet.
+  
+
+     ## Remplissage du tableau result_repet.
 
   # Si AIC du modele avec le type de foret <AIC du modele avec variable envir, il ya a un effet du type de foret, Detla AIC fixe a 5.
   result_repet <- c(ifelse(AIC(glm_type_F1) + 5 < AIC(glm_envir1), 1, 0),
@@ -42,6 +76,7 @@ fun_fit <- function(k,matrice_tot, i) {
   names(result_repet) <- c("Effet_FA", "Coef_FR", "AIC_envir", "AIC_FA")
   return(as.data.frame(t(result_repet)))
 }
+
 
 FUN_RES_SP <- function(i, N_resample, matrice_tot){
 
@@ -93,13 +128,13 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
+Analyse_liste <- function(n_start, n_end, matrice_tot, N_resample = 3) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
   library(igraph)
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- foreach(i = 1:(length(pres_abs_sp)),
+  result_list <- foreach(i = n_start:n_end,
                          .export = c("FUN_RES_SP", "fun_fit"),
                          .packages = "igraph") %dopar% {
                            FUN_RES_SP(i, N_resample, matrice_tot)
@@ -109,7 +144,7 @@ Analyse_liste <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
+Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 3) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -117,7 +152,7 @@ Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
   library(tidyr)
   library(dplyr)
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- mclapply(1:(length(pres_abs_sp)),
+  result_list <- mclapply(n_start:n_end,
                           FUN_RES_SP, N_resample, matrice_tot,
                           mc.cores = 5)
 
@@ -127,9 +162,9 @@ Analyse_listeb <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
 
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste2 <- function(pres_abs_sp, matrice_tot, N_resample = 3) {
+Analyse_liste2 <- function(n_start, n_end, matrice_tot, N_resample = 3) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- lapply(1:(length(pres_abs_sp)),
+  result_list <- lapply(n_start:n_end,
                         FUN = FUN_RES_SP, N_resample, matrice_tot)
 
   res <- dplyr::bind_rows(result_list)
@@ -197,7 +232,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
 
   start.time <- Sys.time()
   ResFit <-
-    Analyse_listeb(list_df$pres_abs, list_df$mat, N_resample = 100)
+    Analyse_listeb(1,  ncol(list_df$pres_abs), list_df$mat, N_resample = 20)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -218,8 +253,8 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
   sel_end  <- c(1:9*floor(ncols/10), ncols)[Seq_Sel]
   start.time <- Sys.time()
   ResFit <-
-      Analyse_liste2(list_df$pres_abs[ ,sel_start:sel_end] ,
-                     list_df$mat, N_resample = 100)
+      Analyse_liste2(sel_start, sel_end ,
+                     list_df$mat, N_resample = 20)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
