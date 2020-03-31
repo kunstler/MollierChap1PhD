@@ -118,7 +118,7 @@ Analyse_liste <- function(n_start, n_end, matrice_tot, N_resample = 3) {
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 3) {
+Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 20) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -137,7 +137,7 @@ Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 3) {
 
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste2 <- function(n_start, n_end, matrice_tot, N_resample = 3) {
+Analyse_liste2 <- function(n_start, n_end, matrice_tot, N_resample = 20) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
   result_list <- lapply(n_start:n_end,
                         FUN = FUN_RES_SP, N_resample, matrice_tot)
@@ -213,7 +213,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print(time.taken)
 
   write.csv(ResFit,
-            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties")))
+            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")))
   print("done")
 }
 
