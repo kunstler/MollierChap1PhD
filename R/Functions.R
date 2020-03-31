@@ -94,7 +94,7 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
   SORTIE_sp$AIC_envir_95inf[1] <- quantile(res[, "AIC_envir"], probs = 0.025)
   SORTIE_sp$AIC_type_F_95inf[1] <- quantile(res[, "AIC_FA"], probs = 0.025)
   SORTIE_sp$AIC_envir_95sup[1] <- quantile(res[, "AIC_envir"], probs = 0.975) 
-  SORTIE_sp$AIC_type_F_95sup[1] <- quantile(res[, "AIC_FA"], probs = 0.975)  )
+  SORTIE_sp$AIC_type_F_95sup[1] <- quantile(res[, "AIC_FA"], probs = 0.975)  
   SORTIE_sp$diff_95[1] <-   quantile(x=(res[, "AIC_envir"]-res[,"AIC_FA"]),0.05)
   SORTIE_sp$effet_type_F[1] <- ifelse(SORTIE_sp$diff_95[1]>=5,1,0)
 
