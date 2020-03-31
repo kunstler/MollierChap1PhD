@@ -127,7 +127,7 @@ fun_fit <- function(k,matrice_tot, i) {
  }
  AIC_glmnet(glmnet_envir1l)
  AIC_glmnet(glmnet_type_F1l)
- 
+ AIC_glmnet(glmnet_type_F1l) + 5 <  AIC_glmnet(glmnet_envir1l)
  e_time <- Sys.time()
  e_time - s_time
  
