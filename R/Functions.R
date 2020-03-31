@@ -11,7 +11,7 @@ fun_fit <- function(k,matrice_tot, i) {
   #  resampling only on absence data 
   matrice_tot$response <- matrice_tot[, i+1]
   test1 <- matrice_tot[matrice_tot$response == 1, ]
-  test0t <- test[test$response == 0, ]
+  test0t <- matrice_tot[matrice_tot$response == 0, ]
   test0 <-
     test0t[sample(row.names(test0t),
                        min(10000, nrow(test0t)),
@@ -126,8 +126,9 @@ Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 3) {
   library(tidyr)
   library(dplyr)
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
-  result_list <- mclapply(n_start:n_end,
-                          FUN_RES_SP, N_resample, matrice_tot,
+
+  result_list <- mclapply(X = n_start:n_end,
+                          FUN = FUN_RES_SP, N_resample = N_resample, matrice_tot =  matrice_tot,
                           mc.cores = 5)
 
   res <- dplyr::bind_rows(result_list)
@@ -206,7 +207,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
 
   start.time <- Sys.time()
   ResFit <-
-    Analyse_listeb(1,  ncol(list_df$pres_abs), list_df$mat, N_resample = 20)
+    Analyse_listeb(1, ncol(list_df$pres_abs), list_df$mat, N_resample = 20) #ncol(list_df$pres_abs)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -222,7 +223,7 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
     list_df <- format_data(path = file.path("data",paste0(Parc,
                                                         "_DATA_POINTS1.csv")),
                          Groupe_Select = "Plantes")
-  ncols <- ncol(list_df$pres_abs[, 1:20])
+  ncols <- ncol(list_df$pres_abs)
   sel_start <- (0:9*floor(ncols/10)+1)[Seq_Sel]
   sel_end  <- c(1:9*floor(ncols/10), ncols)[Seq_Sel]
   start.time <- Sys.time()
