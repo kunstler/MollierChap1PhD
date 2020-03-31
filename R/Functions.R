@@ -17,57 +17,121 @@ fun_fit <- function(k,matrice_tot, i) {
                        min(10000, nrow(test0t)),
                        replace = TRUE), ]
   test_fit <- rbind(test1,test0)
-  #
+  # BASIC GLM
   # Modele nul
   glm_nul1 <-
     glm(response ~ 1, family = "binomial", data = test_fit)
 
+ 
   # Modele avec variables environnementales seules
   start_time <- Sys.time()
   glm_envir1 <-
-    step(
-      glm_nul1,
-      ~ .  + Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+    step(glm_nul1,
+      ~ .  + Dist_lisiere_act  + Dist_route+ FORMATION + STRUCTURE + Altitude +
         poly(Altitude, 2) + Pente + poly(Pente, 2)
       + exposition + poly(exposition, 2) + pH + poly(pH, 2)
       + phosphore + poly(phosphore, 2)
       + Azote + poly(Azote, 2)
       + limons + argile,
       direction = "both",
-      trace = 0
-    )
+      trace = 0)
   end_time <- Sys.time()
   end_time - start_time
   
-  # library(glmnet)
-  # #convert training data to matrix format
-  # s_time <- Sys.time()
-  # x <- model.matrix(response~  Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
-  #                     poly(Altitude, 2) + Pente + poly(Pente, 2)+ 
-  #                     exposition + poly(exposition, 2) + pH + poly(pH, 2) +
-  #                     phosphore + poly(phosphore, 2)+
-  #                     Azote + poly(Azote, 2)+
-  #                     limons + argile,test_fit)[, -1]
-  # #perform grid search to find optimal value of lambda
-  # #family= binomial => logistic regression, alpha=1 => lasso
-  # cvfit = cv.glmnet(x, test_fit$response, family = "binomial", type.measure = "auc")
-  # #plot result
-  # var_lasso <- as.matrix(coef(cvfit, s = "lambda.1se"))
-  # vars <- gsub( '(2\\)).*', '\\1', row.names(var_lasso)[var_lasso>0])
-  # vars <- vars[! vars == "(Intercept)"]
-  # 
-  # glm_envir1 <- glm(paste("response ~  ", paste(vars,  collapse = " + ")) ,
-  #                   family = "binomial", data = test_fit)
-  # e_time <- Sys.time()
-  # e_time - s_time
   # 
   # Ajout du type de foret comme predicteur
   glm_type_F1 <- update(glm_envir1, ~ . + TYPE_FORET)
+  summary(glm_type_F1)
 
+  # Infinitely Weighted Logistic Regression
+  Pres <- test_fit$response
+  up.wt = (10^6)^(1 - test_fit$response)
+  test_fit$up.wt <- up.wt
+  glm_nul1b <- glm(response ~ 1, family = "binomial", data = test_fit, weights = up.wt)
   
+  start_time <- Sys.time()
+  glm_envir1b <-
+    step(glm_nul1b,
+         ~ .  + Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+           poly(Altitude, 2) + Pente + poly(Pente, 2)
+         + exposition + poly(exposition, 2) + pH + poly(pH, 2)
+         + phosphore + poly(phosphore, 2)
+         + Azote + poly(Azote, 2)
+         + limons + argile,
+         direction = "both",
+         trace = 0)
+  end_time <- Sys.time()
+  end_time - start_time
 
-     ## Remplissage du tableau result_repet.
+  # Ajout du type de foret comme predicteur
+  glm_type_F1b <- update(glm_envir1b, ~ . + TYPE_FORET)
+  summary(glm_type_F1b)
+  
+  # Downweighted Poisson Regression   
+  p.wt = rep(1.e-6, length(test_fit$response))
+  area <- 519803770 # area in m2 of grid cell on Vanoise national park to update with good mùeasure for each park
+  p.wt[Pres == 0] = area/sum(test_fit$response == 0)
+  test_fit$p.wt <- p.wt
+  glm_nul1c <- glm(response/p.wt ~ 1, data = test_fit,family = poisson(), weights = p.wt)
+    
+  start_time <- Sys.time()
+  glm_envir1c <-
+    step(glm_nul1c,
+         ~ .  + Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+           poly(Altitude, 2) + Pente + poly(Pente, 2)
+         + exposition + poly(exposition, 2) + pH + poly(pH, 2)
+         + phosphore + poly(phosphore, 2)
+         + Azote + poly(Azote, 2)
+         + limons + argile,
+         direction = "both",
+         trace = 0)
+  end_time <- Sys.time()
+  end_time - start_time
+  
+  # Ajout du type de foret comme predicteur
+ glm_type_F1c <- update(glm_envir1c, ~ . + TYPE_FORET)
+ summary(glm_type_F1c)  
 
+ 
+ library(glmnet)
+ #convert training data to matrix format
+ s_time <- Sys.time()
+ x <- model.matrix(response~  Dist_lisiere_act + Dist_route + FORMATION + STRUCTURE + Altitude +
+                     poly(Altitude, 2) + Pente + poly(Pente, 2)+ 
+                     exposition + poly(exposition, 2) + pH + poly(pH, 2) +
+                     phosphore + poly(phosphore, 2)+
+                     Azote + poly(Azote, 2)+
+                     limons + argile,test_fit)[, -1]
+ #perform grid search to find optimal value of lambda
+ #family= binomial => logistic regression, alpha=1 => lasso
+ cvfit = cv.glmnet(x, test_fit$response, family = "binomial", type.measure = "auc")
+ #plot result
+ var_lasso <- as.matrix(coef(cvfit, s = "lambda.1se"))
+ vars <- gsub( '(2\\)).*', '\\1', row.names(var_lasso)[var_lasso>0])
+ vars <- vars[! vars == "(Intercept)"]
+
+ x1 <- model.matrix(eval(parse(text=paste("response ~  ", paste(c(vars),  collapse = " + ")))),
+                         data = test_fit)[, -1] 
+ x2 <- model.matrix(eval(parse(text=paste("response ~  ", paste(c("TYPE_FORET", vars),  collapse = " + ")))),
+                    test_fit)[, -1] 
+ glmnet_envir1l <- glmnet(x1, test_fit$response, family = "binomial",
+                        data = test_fit, lambda = 0)
+ glmnet_type_F1l <- glmnet(x2, test_fit$response, family = "binomial",
+                        data = test_fit, lambda = 0)
+ 
+ AIC_glmnet <- function(fit){
+   tLL <- fit$nulldev - deviance(fit)
+   k <- fit$df
+   AIC <- -tLL+2*k
+   AIC   
+ }
+ AIC_glmnet(glmnet_envir1l)
+ AIC_glmnet(glmnet_type_F1l)
+ 
+ e_time <- Sys.time()
+ e_time - s_time
+ 
+  ## Remplissage du tableau result_repet.
   # Si AIC du modele avec le type de foret <AIC du modele avec variable envir, il ya a un effet du type de foret, Detla AIC fixe a 5.
   result_repet <- c(ifelse(AIC(glm_type_F1) + 5 < AIC(glm_envir1), 1, 0),
                     glm_type_F1[["coefficients"]][["TYPE_FORETForet recente"]],
