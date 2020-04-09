@@ -253,19 +253,20 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
 
 
 
-merge_seq_output <- function(Parc = "PNV",
+Merge_Seq_Output <- function(Parc = "PNV",
                            Groupe_Select = "Plantes"){
   list_df <- vector("list")  
   for ( i in 1:10){
    list_df[[i]]  <- read.csv(file.path("output", paste0(Parc,"_", Groupe_Select,
                                        "_Sorties_", i, ".csv")))
   }  
+  print("read")
   res <- dplyr::bind_rows(list_df)
-  res$Parc <- Parc
-  res$Groupe_Select <- Groupe_Select
+  write.csv(res,
+            file.path("output", paste0(Parc,"_", Groupe_Select,
+                                       "_Sorties", ".csv")))
   return(res)
 }
-
 
 Get_Nspecies_Parc_Group <- function (){
   Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
@@ -283,3 +284,29 @@ Get_Nspecies_Parc_Group <- function (){
   }
   return(mat)
 }
+
+
+Read_All_Output <- function(){
+  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
+  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros")
+  list_df <- vector("list")  
+  i <- 1
+  mat <- matrix(NA, nrow = length(Parc_seq), ncol = length(Groupe_Select_seq))
+  rownames(mat) <- Parc_seq
+  colnames(mat) <- Groupe_Select_seq
+  for (p in Parc_seq){
+    for (g in Groupe_Select_seq){
+      output <- read.csv(file.path("output", paste0(Parc,"_", Groupe_Select,
+                                 "_Sorties", ".csv")))
+      output$Parc <- p
+      output$Group_Select <- g
+      list_df[[i]] <- output 
+      i <- i + 1  
+      mat[p, g] <- nrow(output)
+    }
+  }
+  print(mat)
+  res <- dplyr::bind_rows(list_df)
+  return(res)
+}  
+  
