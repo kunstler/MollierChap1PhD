@@ -53,8 +53,6 @@ fun_fit <- function(k,matrice_tot, i) {
 
 
 FUN_RES_SP <- function(i, N_resample, matrice_tot){
-
-
   # Boucle pour repeter N_resample fois les modeles en echantillonant aleatoirement avec remise.
   result_list <- lapply(1:N_resample,
                         FUN = fun_fit, matrice_tot, i)
@@ -100,6 +98,8 @@ FUN_RES_SP <- function(i, N_resample, matrice_tot){
 
   return(SORTIE_sp)
 }
+
+
 
 # Fonction pour tester effet du type de foret pour chaque espece.
 Analyse_liste <- function(n_start, n_end, matrice_tot, N_resample = 3) {
@@ -164,15 +164,10 @@ matrice_sp <- function(data) {
     merge(pres_abs1, all_data_envir, by.x = 0, by.y = "X_Y")
 }
 
-
-
 ## Function to format data
 
 format_data <- function(path, Groupe_Select = "Plantes"){
-  PN_Point <-
-    read.csv(path,
-             row.names = "X",
-             header = T)
+  PN_Point <- read.csv(path, row.names = "X",header = T)
   PN_Point<-PN_Point[PN_Point$FORMATION %in% c("Coniferes","Melange",
                                                "Feuillus"),]
 
@@ -217,12 +212,28 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print("done")
 }
 
+Fun_Fit_Parc_Group_NoPar <- function (Parc = "PNV", Groupe_Select = "Plantes"){
+  list_df <- format_data(path = file.path("data",paste0(Parc,
+                                                        "_DATA_POINTS1.csv")),
+                         Groupe_Select = Groupe_Select)
+  
+  start.time <- Sys.time()
+  ResFit <-
+    Analyse_liste2(1, ncol(list_df$pres_abs), list_df$mat, N_resample = 20) 
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  print(time.taken)
+  
+  write.csv(ResFit,
+            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")))
+  print("done")
+}
 
 Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
                                     Groupe_Select = "Plantes"){
     list_df <- format_data(path = file.path("data",paste0(Parc,
                                                         "_DATA_POINTS1.csv")),
-                         Groupe_Select = "Plantes")
+                         Groupe_Select = Groupe_Select)
   ncols <- ncol(list_df$pres_abs)
   sel_start <- (0:9*floor(ncols/10)+1)[Seq_Sel]
   sel_end  <- c(1:9*floor(ncols/10), ncols)[Seq_Sel]
@@ -239,4 +250,43 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
                                        "_Sorties_", Seq_Sel, ".csv")))
   print("done")
 }
+
+
+
+merge_seq_output <- function(Parc = "PNV",
+                           Groupe_Select = "Plantes"){
+  list_df <- vector("list")  
+  for ( i in 1:10){
+   list_df[[i]]  <- read.csv(file.path("output", paste0(Parc,"_", Groupe_Select,
+                                       "_Sorties_", i, ".csv")))
+  }  
+  res <- dplyr::bind_rows(list_df)
+  res$Parc <- Parc
+  res$Groupe_Select <- Groupe_Select
+  return(res)
+}
+
+
+Get_Nspecies_Parc_Group <- function (){
+  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
+  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros")
+  mat <- matrix(NA, nrow = length(Parc_seq), ncol = length(Groupe_Select_seq))
+  rownames(mat) <- Parc_seq
+  colnames(mat) <- Groupe_Select_seq
+  for (p in Parc_seq){
+    for (g in Groupe_Select_seq){
+      list_df <- format_data(path = file.path("data",paste0(p,
+                                                            "_DATA_POINTS1.csv")),
+                             Groupe_Select = g)
+      mat[p, g] <- ncol(list_df$pres_abs)
+    }
+  }
+  return(mat)
+}
+
+for (i in 1:10){
+  Fun_Fit_Parc_Group_Seq_T(i, Parc = "PNP",
+                          Groupe_Select = "Oiseaux")
+}
+  
 
