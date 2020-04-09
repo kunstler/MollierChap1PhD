@@ -283,10 +283,3 @@ Get_Nspecies_Parc_Group <- function (){
   }
   return(mat)
 }
-
-for (i in 1:10){
-  Fun_Fit_Parc_Group_Seq_T(i, Parc = "PNP",
-                          Groupe_Select = "Oiseaux")
-}
-  
-
