@@ -296,7 +296,7 @@ Read_All_Output <- function(){
   colnames(mat) <- Groupe_Select_seq
   for (p in Parc_seq){
     for (g in Groupe_Select_seq){
-      output <- read.csv(file.path("output", paste0(Parc,"_", Groupe_Select,
+      output <- read.csv(file.path("output", paste0(p,"_", g,
                                  "_Sorties", ".csv")))
       output$Parc <- p
       output$Group_Select <- g
@@ -309,4 +309,17 @@ Read_All_Output <- function(){
   res <- dplyr::bind_rows(list_df)
   return(res)
 }  
+
+Fun_Plot_ALL <- function(df){
+library(ggplot2)
+
+ggplot(df, aes(x=Group_Select, y=coef_mean, fill=Parc)) + 
+  geom_boxplot(outlier.shape = NA) +theme_bw() +
+  scale_y_continuous(limits = quantile(df$coef_mean, c(0.05, 0.95)))
+
+ggplot(df, aes(x=Group_Select, y=diff_mean, fill=Parc)) + 
+  geom_boxplot(outlier.shape = NA) +theme_bw() +
+  scale_y_continuous(limits = quantile(df$diff_mean, c(0.1, 0.9)))
+
+}
   
