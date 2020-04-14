@@ -264,7 +264,7 @@ Merge_Seq_Output <- function(Parc = "PNV",
   res <- dplyr::bind_rows(list_df)
   write.csv(res,
             file.path("output", paste0(Parc,"_", Groupe_Select,
-                                       "_Sorties", ".csv")))
+                                       "_Sorties", ".csv")),row.names = FALSE)
   return(res)
 }
 
@@ -296,8 +296,13 @@ Read_All_Output <- function(){
   colnames(mat) <- Groupe_Select_seq
   for (p in Parc_seq){
     for (g in Groupe_Select_seq){
+      list_df_t <- format_data(path = file.path("data",paste0(p,
+                                                            "_DATA_POINTS1.csv")),
+                             Groupe_Select = g)
+      
       output <- read.csv(file.path("output", paste0(p,"_", g,
                                  "_Sorties", ".csv")))
+      output$SpeciesCode <- names(list_df_t$pres_abs)
       output$Parc <- p
       output$Group_Select <- g
       list_df[[i]] <- output 
@@ -306,20 +311,20 @@ Read_All_Output <- function(){
     }
   }
   print(mat)
+  names(list_df) <- paste(rep(Parc_seq, each = length(Groupe_Select_seq)), 
+                           rep(Groupe_Select_seq, times =length(Parc_seq)))
   res <- dplyr::bind_rows(list_df)
   return(res)
 }  
 
 Fun_Plot_ALL <- function(df){
-library(ggplot2)
-
-ggplot(df, aes(x=Group_Select, y=coef_mean, fill=Parc)) + 
+ library(ggplot2)
+ ggplot(df, aes(x=Group_Select, y=coef_mean, fill=Parc)) + 
   geom_boxplot(outlier.shape = NA) +theme_bw() +
   scale_y_continuous(limits = quantile(df$coef_mean, c(0.05, 0.95)))
 
-ggplot(df, aes(x=Group_Select, y=diff_mean, fill=Parc)) + 
+ ggplot(df, aes(x=Group_Select, y=diff_mean, fill=Parc)) + 
   geom_boxplot(outlier.shape = NA) +theme_bw() +
   scale_y_continuous(limits = quantile(df$diff_mean, c(0.1, 0.9)))
-
 }
   
