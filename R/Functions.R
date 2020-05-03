@@ -61,13 +61,13 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","Estimate"],
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","Std. Error"],
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","z value"],
-                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","Estimate"],
-                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","Std. Error"],
-                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","z value"],
+                    sglm_type_F1_B$coefficients["TYPE_FORETForet recente","Estimate"],
+                    sglm_type_F1_B$coefficients["TYPE_FORETForet recente","Std. Error"],
+                    sglm_type_F1_B$coefficients["TYPE_FORETForet recente","z value"],
                     AIC(glm_nul1),
                     AIC(glm_envir1),
                     AIC(glm_type_F1),
-                    AIC(glm_type_F1_only),
+                    AIC(glm_type_F1_B),
                     AIC(glm_envir1) - AIC(glm_type_F1))
   
   
