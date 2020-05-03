@@ -6,7 +6,7 @@ library(dplyr)
 # Modele liste d'espece ----
 # Modele liste d'espece ----
 # fonction contenant les modeles a repeter N_resample fois
-fun_fit <- function(k,matrice_tot, i) {
+fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
   # Echantillonnage des 0
   #  resampling only on absence data 
   matrice_tot$response <- matrice_tot[, i+1]
@@ -24,85 +24,77 @@ fun_fit <- function(k,matrice_tot, i) {
 
   # Modele avec variables environnementales seules
   start_time <- Sys.time()
+  if (Groupe_Select %in% c("Reptiles", "Oiseaux", "Mammiferes", "Arthros") ){ 
   glm_envir1 <-
     step(glm_nul1,
-      ~ .  + Dist_lisiere_act  + Dist_route+ FORMATION + STRUCTURE + Altitude +
-        poly(Altitude, 2) + Pente + poly(Pente, 2)
-      + exposition + poly(exposition, 2) + pH + poly(pH, 2)
-      + phosphore + poly(phosphore, 2)
-      + Azote + poly(Azote, 2)
-      + limons + argile,
+      ~ .  + Dist_lisiere_act  + FORMATION + STRUCTURE + 
+        Altitude + I(Altitude^2) + 
+        exposition + I(exposition^2) ,
       direction = "both",
       trace = 0)
+   }else{
+     glm_envir1 <-
+       step(glm_nul1,
+            ~ .  + Dist_lisiere_act  + FORMATION + STRUCTURE + 
+              Altitude + I(Altitude^2) + 
+              exposition + I(exposition^2) +
+              pH + I(pH^2) +
+              Azote + I(Azote^2),
+            direction = "both",
+            trace = 0)
+   }
   end_time <- Sys.time()
   print(end_time - start_time)
   
   # 
   # Ajout du type de foret comme predicteur
   glm_type_F1 <- update(glm_envir1, ~ . + TYPE_FORET)
-
+  glm_type_F1_B <- update(glm_nul1, ~ . + TYPE_FORET)
+  
+  # resume du modele pour rÈcuperer les z value
+  sglm_type_F1<-summary(glm_type_F1)
+  sglm_type_F1_B<-summary(glm_type_F1_B)
+  
   ## Remplissage du tableau result_repet.
-  # Si AIC du modele avec le type de foret <AIC du modele avec variable envir, il ya a un effet du type de foret, Detla AIC fixe a 5.
-  result_repet <- c(ifelse(AIC(glm_type_F1) + 5 < AIC(glm_envir1), 1, 0),
-                    glm_type_F1[["coefficients"]][["TYPE_FORETForet recente"]],
+  result_repet <- c(names(matrice_tot)[i+1], 
+                    k,
+                    sglm_type_F1$coefficients["TYPE_FORETForet recente","Estimate"],
+                    sglm_type_F1$coefficients["TYPE_FORETForet recente","Std. Error"],
+                    sglm_type_F1$coefficients["TYPE_FORETForet recente","z value"],
+                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","Estimate"],
+                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","Std. Error"],
+                    sglm_type_F1_only$coefficients["TYPE_FORETForet recente","z value"],
+                    AIC(glm_nul1),
                     AIC(glm_envir1),
-                    AIC(glm_type_F1))
-  names(result_repet) <- c("Effet_FA", "Coef_FR", "AIC_envir", "AIC_FA")
+                    AIC(glm_type_F1),
+                    AIC(glm_type_F1_only),
+                    AIC(glm_envir1) - AIC(glm_type_F1))
+  
+  
+  names(result_repet) <- c("CdNom","N_resample",
+                           "estimate_E", "estim_sd_E","z_value_E",
+                           "estimate_B", "estim_sd_B","z_value_B",
+                           "AIC_null", "AIC_envir", 
+                           "AIC_FA_E", "AIC_FA_B",
+                           "delta AIC")
   return(as.data.frame(t(result_repet)))
 }
 
 
-FUN_RES_SP <- function(i, N_resample, matrice_tot){
+FUN_RES_SP <- function(i, N_resample, matrice_tot, Groupe_Select){
   # Boucle pour repeter N_resample fois les modeles en echantillonant aleatoirement avec remise.
   result_list <- lapply(1:N_resample,
-                        FUN = fun_fit, matrice_tot, i)
+                        FUN = fun_fit, matrice_tot, i, Groupe_Select)
 
   res <- dplyr::bind_rows(result_list)
 
-  ## Remplissage de la matrice SORTIE_sp:
-  SORTIE_sp <-
-    data.frame(matrix(0, nrow = 1, ncol = 14))
-  names(SORTIE_sp) <-
-    c("Occurence",
-      "nb_effet",
-      "effet_type_F",
-      "coef_mean",
-      "coef_type_F_95inf",
-      "coef_type_F_95sup",
-      "AIC_envir_mean",
-      "AIC_envir_95inf",
-      "AIC_envir_95sup",
-      "AIC_type_F_mean",
-      "AIC_type_F_95inf",
-      "AIC_type_F_95sup","diff_mean","diff_95")
-  SORTIE_sp$Occurence[1] <-
-    sum(as.numeric(paste(matrice_tot[, i+1])))
-  # Abondance de l'espece dans le jeux de donnees
-
-  # Moyenne des coeficients
-  SORTIE_sp$coef_mean[1] <-   mean(res[, "Coef_FR"])
-  SORTIE_sp$AIC_envir_mean[1] <-   mean(res[, "AIC_envir"])
-  SORTIE_sp$AIC_type_F_mean[1] <-   mean(res[, "AIC_FA"])
-  SORTIE_sp$diff_mean[1] <-   mean(res[, "AIC_envir"]-res[,"AIC_FA"])
-
-  # Valeur min et max des coefficients et des AIC.
-  SORTIE_sp$nb_effet[1] <- sum(res[, "Effet_FA"])
-  SORTIE_sp$coef_type_F_95inf[1] <- quantile(res[, "Coef_FR"], probs = 0.025)
-  SORTIE_sp$coef_type_F_95sup[1] <- quantile(res[, "Coef_FR"], probs = 0.975)
-  SORTIE_sp$AIC_envir_95inf[1] <- quantile(res[, "AIC_envir"], probs = 0.025)
-  SORTIE_sp$AIC_type_F_95inf[1] <- quantile(res[, "AIC_FA"], probs = 0.025)
-  SORTIE_sp$AIC_envir_95sup[1] <- quantile(res[, "AIC_envir"], probs = 0.975) 
-  SORTIE_sp$AIC_type_F_95sup[1] <- quantile(res[, "AIC_FA"], probs = 0.975)  
-  SORTIE_sp$diff_95[1] <-   quantile(x=(res[, "AIC_envir"]-res[,"AIC_FA"]),0.05)
-  SORTIE_sp$effet_type_F[1] <- ifelse(SORTIE_sp$diff_95[1]>=5,1,0)
-
-  return(SORTIE_sp)
+  return(res)
 }
 
 
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste <- function(n_start, n_end, matrice_tot, N_resample = 3) {
+Analyse_liste <- function(n_start, n_end, matrice_tot, Groupe_Select, N_resample = 20) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -111,14 +103,14 @@ Analyse_liste <- function(n_start, n_end, matrice_tot, N_resample = 3) {
   result_list <- foreach(i = n_start:n_end,
                          .export = c("FUN_RES_SP", "fun_fit"),
                          .packages = "igraph") %dopar% {
-                           FUN_RES_SP(i, N_resample, matrice_tot)
+                           FUN_RES_SP(i, N_resample, matrice_tot, Groupe_Select)
                          }
   res <- dplyr::bind_rows(result_list)
   return(res)
 }
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 20) {
+Analyse_listeb <- function(n_start,n_end, matrice_tot, Groupe_Select, N_resample = 20) {
   # Packages ----
   library(MuMIn)
   library(doParallel)
@@ -128,7 +120,8 @@ Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 20) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
 
   result_list <- mclapply(X = n_start:n_end,
-                          FUN = FUN_RES_SP, N_resample = N_resample, matrice_tot =  matrice_tot,
+                          FUN = FUN_RES_SP, N_resample = N_resample, 
+                          matrice_tot =  matrice_tot, Groupe_Select,
                           mc.cores = 5)
 
   res <- dplyr::bind_rows(result_list)
@@ -137,61 +130,84 @@ Analyse_listeb <- function(n_start,n_end, matrice_tot, N_resample = 20) {
 
 
 # Fonction pour tester effet du type de foret pour chaque espece.
-Analyse_liste2 <- function(n_start, n_end, matrice_tot, N_resample = 20) {
+Analyse_liste2 <- function(n_start, n_end, matrice_tot, Groupe_Select, N_resample = 20) {
   # boucle for pour appliquer les instructions pour chaque espece (chaque colonne de ma matrice de pres/abs)
   result_list <- lapply(n_start:n_end,
-                        FUN = FUN_RES_SP, N_resample, matrice_tot)
+                        FUN = FUN_RES_SP, N_resample, matrice_tot, Groupe_Select)
 
   res <- dplyr::bind_rows(result_list)
   return(res)
 }
 
 # matrice de presence/pseudo_absence
-matrice_sp <- function(data) {
+
+matrice_sp <- function(data,N=20) {
   sp_occ <- data.frame(table(data$CdNom)) #comptage sp
-  sp_occ <- sp_occ[sp_occ$Freq >= 20, ]
-           # selection sp presentes au moins 20 fois
+  sp_occ <- sp_occ[sp_occ$Freq >= N, ]
+  if(nrow(sp_occ)>1){
   occ_20 <- merge(data, sp_occ, by.x = "CdNom", by.y = "Var1")
-  pres_abs1 <-
-    as.data.frame(tapply(rep(1, dim(occ_20)[1]), list(occ_20$X_Y, occ_20$CdNom),
-                         function(x) {
-                           max(x, na.rm = F)
-                         }))
-  pres_abs1[is.na(pres_abs1)] = 0
+  pres_abs1 <-dplyr::select(occ_20,CdNom,X_Y)%>%cbind(.,nb=1)
+  pres_abs1<-aggregate(nb~X_Y+CdNom,pres_abs1,sum)
+  pres_abs1<-spread(pres_abs1,CdNom,nb,fill=0)
+  pres_abs1 <- mutate_all(pres_abs1[, -1], function(x) {
+    ifelse(x > 0, 1, 0)
+  })
+  pres_abs1<-cbind(pres_abs1,"X_Y"=unique(occ_20$X_Y))
   all_data_envir <-
     dplyr::select(occ_20, ESSENCE:FORMATION, X_Y:Grossier)
   pres_abs <-
-    merge(pres_abs1, all_data_envir, by.x = 0, by.y = "X_Y")
+    merge(pres_abs1, all_data_envir, by= "X_Y")
+  }else{
+  pres_abs <- NA  
+  }
+  return(pres_abs)
 }
+
 
 ## Function to format data
 
-format_data <- function(path, Groupe_Select = "Plantes"){
+format_data <- function(path, Groupe_Select = "Plantes",N=20){
   PN_Point <- read.csv(path, row.names = "X",header = T)
   PN_Point<-PN_Point[PN_Point$FORMATION %in% c("Coniferes","Melange",
                                                "Feuillus"),]
-
+  
   PN_Point <- drop_na(PN_Point, pH)
   PN_Point <- dplyr::select(PN_Point, -Dist_lisiere_anc)
   colnames(PN_Point)[names(PN_Point) %in% "distance_FA"] <- "Dist_lisiere_anc"
   PN_Point$Dist_route <- log(PN_Point$Dist_route + 1)
   PN_Point$Dist_lisiere_act <- log(PN_Point$Dist_lisiere_act + 1)
-
   list_select <- list("Plantes" = c("Angiospermes", "Gymnospermes"),
                       "Mammiferes" = c("Mammiferes"),
                       "Reptiles" = c("Reptiles"),
                       "Arthros" = c("Arachnides", "Insectes"),
-                      "Oiseaux" = c("Oiseaux"))
-
- PN_Select <-
+                      "Oiseaux" = c("Oiseaux"),
+                      "Mousses"=c("Bryidae","Hepatiques et Anthocerotes"),
+                      "Pteridophytes"=c("Pteridophytes"),
+                      "Lichens"=c("Lichens"))
+  
+ if(Groupe_Select == "Champignons"){
+   PN_Select <-
+      PN_Point[PN_Point$Regne %in% "Fungi",]
+  }else{
+  PN_Select <-
     PN_Point[PN_Point$Groupe %in% list_select[[Groupe_Select]],]
+  }
+  if(nrow(PN_Select)>1){
   matrice_Select <-
-    matrice_sp(PN_Select) # matrice presence-absence avec variables
+    matrice_sp(PN_Select,N) # matrice presence-absence avec variables
+  if(is.data.frame(matrice_Select)){
   pres_abs_Select <-
-      dplyr::select(matrice_Select,-c("ESSENCE":"Grossier"))
-                     # matrice de presence-absence seules
-
-  return(list(mat = matrice_Select, pres_abs = pres_abs_Select[, -1]))
+    dplyr::select(matrice_Select,-c("ESSENCE":"Grossier"))
+  pres_abs_Select <- pres_abs_Select[, -1]
+  # matrice de presence-absence seules
+  }else{
+    pres_abs_Select <- NA  
+  }}else{
+    pres_abs_Select <- NA  
+    matrice_Select <- NA
+  }
+  print(dim( pres_abs_Select))
+  return(list(mat = matrice_Select, pres_abs = pres_abs_Select))
 }
 
 
@@ -202,7 +218,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
 
   start.time <- Sys.time()
   ResFit <-
-    Analyse_listeb(1, ncol(list_df$pres_abs), list_df$mat, N_resample = 20) 
+    Analyse_listeb(1, ncol(list_df$pres_abs), list_df$mat, Groupe_Select, N_resample = 20) 
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -212,6 +228,8 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print("done")
 }
 
+
+
 Fun_Fit_Parc_Group_NoPar <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   list_df <- format_data(path = file.path("data",paste0(Parc,
                                                         "_DATA_POINTS1.csv")),
@@ -219,7 +237,7 @@ Fun_Fit_Parc_Group_NoPar <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   
   start.time <- Sys.time()
   ResFit <-
-    Analyse_liste2(1, ncol(list_df$pres_abs), list_df$mat, N_resample = 20) 
+    Analyse_liste2(1, ncol(list_df$pres_abs), list_df$mat, Groupe_Select, N_resample = 20) 
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -230,17 +248,18 @@ Fun_Fit_Parc_Group_NoPar <- function (Parc = "PNV", Groupe_Select = "Plantes"){
 }
 
 Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
-                                    Groupe_Select = "Plantes"){
+                                    Groupe_Select = "Plantes",
+                                    Ncut=5){
     list_df <- format_data(path = file.path("data",paste0(Parc,
                                                         "_DATA_POINTS1.csv")),
                          Groupe_Select = Groupe_Select)
   ncols <- ncol(list_df$pres_abs)
-  sel_start <- (0:9*floor(ncols/10)+1)[Seq_Sel]
-  sel_end  <- c(1:9*floor(ncols/10), ncols)[Seq_Sel]
+  sel_start <- (0:(Ncut-1)*floor(ncols/Ncut)+1)[Seq_Sel]
+  sel_end  <- c(1:(Ncut-1)*floor(ncols/Ncut), ncols)[Seq_Sel]
   start.time <- Sys.time()
   ResFit <-
       Analyse_liste2(sel_start, sel_end ,
-                     list_df$mat, N_resample = 20)
+                     list_df$mat, Groupe_Select, N_resample = 20)
   end.time <- Sys.time()
   time.taken <- end.time - start.time
   print(time.taken)
@@ -254,9 +273,9 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
 
 
 Merge_Seq_Output <- function(Parc = "PNV",
-                           Groupe_Select = "Plantes"){
+                           Groupe_Select = "Plantes", Ncut = 5){
   list_df <- vector("list")  
-  for ( i in 1:10){
+  for ( i in 1:Ncut){
    list_df[[i]]  <- read.csv(file.path("output", paste0(Parc,"_", Groupe_Select,
                                        "_Sorties_", i, ".csv")))
   }  
@@ -270,7 +289,9 @@ Merge_Seq_Output <- function(Parc = "PNV",
 
 Get_Nspecies_Parc_Group <- function (){
   Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
-  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros")
+  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros", 
+                         "Mousses","Pteridophytes", "Lichens", "Champignons")
+  
   mat <- matrix(NA, nrow = length(Parc_seq), ncol = length(Groupe_Select_seq))
   rownames(mat) <- Parc_seq
   colnames(mat) <- Groupe_Select_seq
@@ -279,7 +300,11 @@ Get_Nspecies_Parc_Group <- function (){
       list_df <- format_data(path = file.path("data",paste0(p,
                                                             "_DATA_POINTS1.csv")),
                              Groupe_Select = g)
+      if(!is.data.frame(list_df$pres_abs)){
+      mat[p, g] <- 0  
+      }else{
       mat[p, g] <- ncol(list_df$pres_abs)
+      }
     }
   }
   return(mat)
@@ -288,7 +313,8 @@ Get_Nspecies_Parc_Group <- function (){
 
 Read_All_Output <- function(){
   Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
-  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros")
+  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros",
+                         "Mousses","Pteridophytes", "Lichens", "Champignons")
   list_df <- vector("list")  
   i <- 1
   mat <- matrix(NA, nrow = length(Parc_seq), ncol = length(Groupe_Select_seq))
@@ -327,4 +353,43 @@ Fun_Plot_ALL <- function(df){
   geom_boxplot(outlier.shape = NA) +theme_bw() +
   scale_y_continuous(limits = quantile(df$diff_mean, c(0.1, 0.9)))
 }
-  
+ 
+
+PCAmix_Parc <- function (Parc = "PNV"){
+   path <- file.path("data",paste0(Parc,"_DATA_POINTS1.csv"))
+   PN_Point <- read.csv(path, row.names = "X",header = T)
+   PN_Point<-PN_Point[PN_Point$FORMATION %in% c("Coniferes","Melange",
+                                                "Feuillus"),]
+   PN_Point <- drop_na(PN_Point, pH)
+   PN_Point <- dplyr::select(PN_Point, -Dist_lisiere_anc)
+   colnames(PN_Point)[names(PN_Point) %in% "distance_FA"] <- "Dist_lisiere_anc"
+   PN_Point$Dist_route <- log(PN_Point$Dist_route + 1)
+   PN_Point$Dist_lisiere_act <- log(PN_Point$Dist_lisiere_act + 1)
+
+   VarsQual <- c( "FORMATION", "STRUCTURE")
+   VarsQuant <- c("Dist_lisiere_act" , "Dist_route","Altitude",
+                  "Pente", "exposition", "pH" , "phosphore",  "Azote", "limons", "argile")
+   Vars <- c(VarsQual,VarsQuant)
+   cor_mat <- cor(PN_Point[, VarsQuant])
+   print(cor_mat)
+   library(PCAmixdata)
+   print(Parc)
+   print(table(factor(PN_Point$FORMATION)))
+   print(table(factor(PN_Point$STRUCTURE)))
+
+res <- PCAmix(PN_Point[, VarsQuant], PN_Point[, VarsQual])
+pdf(paste0("figures/",Parc, "_PCAmix.pdf"), width = 11, height = 11)
+par(mfrow = c(2,2))
+plot(res, choice = "sqload", main = Parc)
+plot(res, choice = "levels")
+plot(res, choice = "cor")
+dev.off()
+}
+
+
+Plot_PCAmix_All <- function(){
+  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
+  lapply(Parc_seq, PCAmix_Parc)
+}
+
+
