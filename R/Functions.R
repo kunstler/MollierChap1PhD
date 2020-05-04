@@ -224,7 +224,7 @@ Fun_Fit_Parc_Group <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print(time.taken)
 
   write.csv(ResFit,
-            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")))
+            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")),row.names = FALSE)
   print("done")
 }
 
@@ -243,7 +243,7 @@ Fun_Fit_Parc_Group_NoPar <- function (Parc = "PNV", Groupe_Select = "Plantes"){
   print(time.taken)
   
   write.csv(ResFit,
-            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")))
+            file.path("output", paste0(Parc,"_", Groupe_Select,"_Sorties.csv")),row.names = FALSE)
   print("done")
 }
 
@@ -266,7 +266,7 @@ Fun_Fit_Parc_Group_Seq <- function (Seq_Sel, Parc = "PNV",
 
   write.csv(ResFit,
             file.path("output", paste0(Parc,"_", Groupe_Select,
-                                       "_Sorties_", Seq_Sel, ".csv")))
+                                       "_Sorties_", Seq_Sel, ".csv")),row.names = FALSE)
   print("done")
 }
 
@@ -286,6 +286,19 @@ Merge_Seq_Output <- function(Parc = "PNV",
                                        "_Sorties", ".csv")),row.names = FALSE)
   return(res)
 }
+
+Merge_Cluster <- function(){
+  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
+  Groupe_Select_seq = c( "Plantes", "Oiseaux", "Arthros")
+  for (p in Parc_seq){
+    for(g in Groupe_Select_seq){
+      Merge_Seq_Output(Parc = p,
+                       Groupe_Select = g, Ncut = 5)
+      
+    }    
+  }
+}
+  
 
 Get_Nspecies_Parc_Group <- function (){
   Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
