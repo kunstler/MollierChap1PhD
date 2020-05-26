@@ -24,6 +24,17 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
 
   # Modele avec variables environnementales seules
   start_time <- Sys.time()
+  
+  glm_envir1old <-
+    step(glm_nul1,
+         ~ .  + Dist_lisiere_act  + Dist_route+ FORMATION + STRUCTURE + Altitude +
+           I(Altitude^2) + Pente + I(Pente^2)
+         + exposition + I(exposition^2) + pH + I(pH^2)
+         + phosphore + I(phosphore^2)
+         + Azote + I(Azote^2)
+         + limons + argile,
+         direction = "both",
+         trace = 0)
   if (Groupe_Select %in% c("Reptiles", "Oiseaux", "Mammiferes", "Arthros") ){ 
   glm_envir1 <-
     step(glm_nul1,
@@ -45,14 +56,21 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
    }
   end_time <- Sys.time()
   print(end_time - start_time)
-  
+  varImp_glm_env1old <- as.matrix(caret::varImp(glm_envir1old))
+  vars_names_old <- c("Dist_lisiere_act", "FORMATION", "STRUCTURE", "Altitude", "I(Altitude^2)",
+    "exposition", "I(exposition^2)", "pH", "I(pH^2)", "Azote", "I(Azote^2)",
+    "Pente", "I(Pente^2)","phosphore", "I(phosphore^2)", "limons","argile")
+  VarsImpOld <- rep(NA, length(vars_names_old))
+  names(VarsImpOld) <- vars_names_old
+  VarsImpOld[rownames(varImp_glm_env1old)] <- varImp_glm_env1old
   # 
   # Ajout du type de foret comme predicteur
   glm_type_F1 <- update(glm_envir1, ~ . + TYPE_FORET)
+  glm_type_F1old <- update(glm_envir1old, ~ . + TYPE_FORET)
   glm_type_F1_B <- update(glm_nul1, ~ . + TYPE_FORET)
-  
   # resume du modele pour rÈcuperer les z value
   sglm_type_F1<-summary(glm_type_F1)
+  sglm_type_F1old<-summary(glm_type_F1old)
   sglm_type_F1_B<-summary(glm_type_F1_B)
   
   ## Remplissage du tableau result_repet.
@@ -61,22 +79,30 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","Estimate"],
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","Std. Error"],
                     sglm_type_F1$coefficients["TYPE_FORETForet recente","z value"],
+                    sglm_type_F1old$coefficients["TYPE_FORETForet recente","Estimate"],
+                    sglm_type_F1old$coefficients["TYPE_FORETForet recente","Std. Error"],
+                    sglm_type_F1old$coefficients["TYPE_FORETForet recente","z value"],
                     sglm_type_F1_B$coefficients["TYPE_FORETForet recente","Estimate"],
                     sglm_type_F1_B$coefficients["TYPE_FORETForet recente","Std. Error"],
                     sglm_type_F1_B$coefficients["TYPE_FORETForet recente","z value"],
                     AIC(glm_nul1),
                     AIC(glm_envir1),
+                    AIC(glm_envir1old),
                     AIC(glm_type_F1),
+                    AIC(glm_type_F1old),
                     AIC(glm_type_F1_B),
-                    AIC(glm_envir1) - AIC(glm_type_F1))
+                    AIC(glm_envir1) - AIC(glm_type_F1),
+                    AIC(glm_envir1old) - AIC(glm_type_F1old))
   
   
   names(result_repet) <- c("CdNom","N_resample",
                            "estimate_E", "estim_sd_E","z_value_E",
+                           "estimate_Eold", "estim_sd_Eold","z_value_Eold",
                            "estimate_B", "estim_sd_B","z_value_B",
-                           "AIC_null", "AIC_envir", 
-                           "AIC_FA_E", "AIC_FA_B",
-                           "delta AIC")
+                           "AIC_null", "AIC_envir", "AIC_envirold", 
+                           "AIC_FA_E", "AIC_FA_Eold","AIC_FA_B",
+                           "delta AIC", "delta AIC old")
+  result_repet <- c(result_repet, as.vector(VarsImpOld))
   return(as.data.frame(t(result_repet)))
 }
 
@@ -321,6 +347,41 @@ Get_Nspecies_Parc_Group <- function (){
     }
   }
   return(mat)
+}
+
+
+Get_Cor_Parc_Group <- function (){
+  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
+  Groupe_Select_seq = c( "Reptiles", "Plantes", "Oiseaux", "Mammiferes", "Arthros", 
+                         "Mousses","Pteridophytes", "Lichens", "Champignons")
+  
+  vec_vars_conti <- c("Dist_lisiere_act", "Altitude", "exposition", 
+                      "pH", "Azote", "phosphore", "limons",
+                      "limons", "argile", "Pente")
+  names_vars <- c(vec_vars_conti,"FORMATION", "STRUCTURE")
+  res_list <- vector("list")
+  for (p in Parc_seq){
+    mat <- matrix(NA, nrow = length(names_vars), ncol = length(Groupe_Select_seq))
+    rownames(mat) <- names_vars
+    colnames(mat) <- Groupe_Select_seq
+    for (g in Groupe_Select_seq){
+      list_df <- format_data(path = file.path("data",paste0(p,
+                                                            "_DATA_POINTS1.csv")),
+                             Groupe_Select = g)
+      if(!is.data.frame(list_df$pres_abs)){
+        mat[, g] <- 0
+      }else{
+        res <- sapply(vec_vars_conti, function(x, df) cor.test(df[,x], unclass(df[,"TYPE_FORET"]))$estimate, df = list_df$mat)
+        cat1 <- DescTools::CramerV(unclass(list_df$mat[,"TYPE_FORET"]), unclass(list_df$mat[,"FORMATION"]))
+        cat2 <- DescTools::CramerV(unclass(list_df$mat[,"TYPE_FORET"]), unclass(list_df$mat[,"STRUCTURE"]))
+        res <- c(res, cat1, cat2)
+        names(res) <- names_vars  
+        mat[, g] <- res
+      }
+      res_list[[p]] <- mat
+    }
+  }
+  return(res_list)
 }
 
 
