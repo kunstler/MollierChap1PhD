@@ -56,13 +56,14 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
    }
   end_time <- Sys.time()
   print(end_time - start_time)
-  varImp_glm_env1old <- as.matrix(caret::varImp(glm_envir1old))
+  varImp_glm_env1old <- drop1(glm_envir1old, test = "Chisq")[-1, 5]
+  names(varImp_glm_env1old) <- rownames(drop1(glm_envir1old, test = "Chisq")[-1, ])
   vars_names_old <- c("Dist_lisiere_act", "FORMATION", "STRUCTURE", "Altitude", "I(Altitude^2)",
     "exposition", "I(exposition^2)", "pH", "I(pH^2)", "Azote", "I(Azote^2)",
     "Pente", "I(Pente^2)","phosphore", "I(phosphore^2)", "limons","argile")
   VarsImpOld <- rep(NA, length(vars_names_old))
   names(VarsImpOld) <- vars_names_old
-  VarsImpOld[rownames(varImp_glm_env1old)] <- varImp_glm_env1old
+  VarsImpOld[names(varImp_glm_env1old)] <- varImp_glm_env1old
   # 
   # Ajout du type de foret comme predicteur
   glm_type_F1 <- update(glm_envir1, ~ . + TYPE_FORET)
@@ -102,7 +103,8 @@ fun_fit <- function(k,matrice_tot, i, Groupe_Select ) {
                            "AIC_null", "AIC_envir", "AIC_envirold", 
                            "AIC_FA_E", "AIC_FA_Eold","AIC_FA_B",
                            "delta AIC", "delta AIC old")
-  result_repet <- c(result_repet, as.vector(VarsImpOld))
+  result_repet <- c(result_repet, VarsImpOld)
+
   return(as.data.frame(t(result_repet)))
 }
 
@@ -232,7 +234,6 @@ format_data <- function(path, Groupe_Select = "Plantes",N=20){
     pres_abs_Select <- NA  
     matrice_Select <- NA
   }
-  print(dim( pres_abs_Select))
   return(list(mat = matrice_Select, pres_abs = pres_abs_Select))
 }
 
