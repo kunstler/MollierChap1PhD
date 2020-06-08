@@ -421,6 +421,7 @@ Read_All_Output <- function(){
   }
   print(mat)
   res <- dplyr::bind_rows(list_df)
+  res$delta.AIC.null <- res$AIC_null - res$AIC_FA_B
   return(res)
 }  
 
@@ -474,6 +475,21 @@ dev.off()
 Plot_PCAmix_All <- function(){
   Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
   lapply(Parc_seq, PCAmix_Parc)
+}
+
+format_res <- function(res){
+  res_summarise <- res %>% group_by(Group_Select, Parc, CdNom) %>% 
+    summarise(n_resample = n(),
+              n_delta.AIC.null = sum(delta.AIC.null > 5),
+              n_delta.AIC.old = sum(delta.AIC.old > 5),
+              n_delta.AIC = sum(delta.AIC > 5),
+              median_delta.AIC.null = median(delta.AIC.null),
+              median_delta.AIC.old = median(delta.AIC.old),
+              median_delta.AIC = median(delta.AIC)) %>%
+    mutate(p_delta.AIC.null = n_delta.AIC.null/n_resample,
+           p_delta.AIC.old = n_delta.AIC.old/n_resample,
+           p_delta.AIC = n_delta.AIC/n_resample)                                                      
+  return(res_summarise)
 }
 
 
