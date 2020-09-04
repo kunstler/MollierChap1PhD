@@ -23,6 +23,7 @@ loadd(res_summarise)
 
 loadd(table_new_null)
 loadd(table_new_old)
+loadd(BDC_statut)
 
 # Plot Delta AIC between methods
 # New vs old

@@ -321,8 +321,8 @@ Merge_Seq_Output <- function(Parc = "PNV",
 }
 
 Merge_Cluster <- function(){
-  Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
-  Groupe_Select_seq = c( "Plantes", "Oiseaux", "Arthros")
+  Parc_seq <- c("PNV", "PNE", "PNP",  "PNM")#"PNC",
+  Groupe_Select_seq = c( "Plantes")# , "Oiseaux", "Arthros"
   for (p in Parc_seq){
     for(g in Groupe_Select_seq){
       Merge_Seq_Output(Parc = p,
@@ -486,13 +486,12 @@ Plot_PCAmix_All <- function(){
 Data_PN_BDC_statut <- function(){
     Parc_seq <- c("PNV", "PNE", "PNP", "PNC", "PNM")
     f <- function(x){
-        df <- read.csv(paste0("data/",x, "_BDC_statut.csv"), row.names = 1)
+        df <- read.csv(paste0("data/",x, "_BDC_statut.csv"), row.names = 1, fileEncoding = "Latin1")
         df$PN <- x
         df
     }
     l_df <- lapply(Parc_seq,f)
     df <- bind_rows(l_df)
-    df <- df[!duplicated(df$CdRef), ]
   df
 }
 
@@ -524,8 +523,9 @@ format_res <- function(res, Taxref, BDC_statut){
                                                         "Nom_Latin")],
                               by = "CdNom")
   res_summarise  <- left_join(res_summarise, BDC_statut,
-                              by = c("CdNom" = "CdRef"))
+                              by = c("CdNom" = "CdRef", "Parc" = "PN"))
   res_summarise$Nom_Latin <- factor(res_summarise$Nom_Latin)
+  print("done")
   return(res_summarise)
 }
 
