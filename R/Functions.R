@@ -425,7 +425,7 @@ Read_All_Output <- function(){
       mat[p, g] <- nrow(output)
     }
   }
-  print(mat)
+
   res <- dplyr::bind_rows(list_df)
   res$delta.AIC.null <- res$AIC_null - res$AIC_FA_B
   return(res)
@@ -525,7 +525,7 @@ format_res <- function(res, Taxref, BDC_statut){
   res_summarise  <- left_join(res_summarise, BDC_statut,
                               by = c("CdNom" = "CdRef", "Parc" = "PN"))
   res_summarise$Nom_Latin <- factor(res_summarise$Nom_Latin)
-  print("done")
+  print("done 2")
   return(res_summarise)
 }
 

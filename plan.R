@@ -1,4 +1,4 @@
-# TODO write in drake
+# drake plan to format output oif cluster
 source("R/Functions.R")
 
 library(ggplot2)
@@ -26,6 +26,22 @@ loadd(table_new_old)
 loadd(BDC_statut)
 
 # Plot Delta AIC between methods
+# New vs old
+ggplot(res_summarise, aes(x = median_delta.AIC, y = median_delta.AIC.old))+geom_point()+
+  geom_abline(slope = 1, intercept = 0,color = "red")+
+facet_wrap(Parc ~ Group_Select, scales="free", nrow = 5)
+
+ggplot(res_summarise[res_summarise$Group_Select == "Plantes",], aes(x = median_delta.AIC, y = median_delta.AIC.old))+geom_point()+
+  geom_abline(slope = 1, intercept = 0,color = "red")+
+  facet_wrap(Parc ~ Group_Select, scales="free", nrow = 5)
+# New vs Null
+ggplot(res_summarise, aes(x = median_delta.AIC, y = median_delta.AIC.null))+geom_point()+
+  geom_abline(slope = 1, intercept = 0,color = "red")+
+  facet_wrap(Parc ~ Group_Select, scales="free", nrow = 5)
+
+ggplot(res_summarise[res_summarise$Group_Select == "Plantes",], aes(x = median_delta.AIC, y = median_delta.AIC.null))+geom_point()+
+  geom_abline(slope = 1, intercept = 0,color = "red")+
+  facet_wrap(Parc ~ Group_Select, scales="free", nrow = 5)
 # New vs old
 ggplot(res, aes(x = delta.AIC, y = delta.AIC.old))+geom_point()+
   geom_abline(slope = 1, intercept = 0,color = "red")+
